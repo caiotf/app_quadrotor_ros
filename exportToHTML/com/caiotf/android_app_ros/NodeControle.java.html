@@ -1,0 +1,385 @@
+<html>
+<head>
+<title>NodeControle.java</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.ln { color: #999999; font-weight: normal; font-style: normal; }
+.s0 { color: rgb(0,0,128); font-weight: bold; }
+.s1 { color: rgb(0,0,0); }
+.s2 { color: rgb(0,128,0); font-weight: bold; }
+.s3 { color: rgb(0,0,255); }
+</style>
+</head>
+<BODY BGCOLOR="#ffffff">
+<TABLE CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#c0c0c0" >
+<TR><TD><CENTER>
+<FONT FACE="Arial, Helvetica" COLOR="#000000">
+NodeControle.java</FONT>
+</center></TD></TR></TABLE>
+<pre>
+<span class="s0">package </span><span class="s1">com.caiotf.android_app_ros; 
+ 
+</span><span class="s0">import </span><span class="s1">android.content.Context; 
+</span><span class="s0">import </span><span class="s1">android.hardware.Sensor; 
+</span><span class="s0">import </span><span class="s1">android.hardware.SensorEvent; 
+</span><span class="s0">import </span><span class="s1">android.hardware.SensorEventListener; 
+</span><span class="s0">import </span><span class="s1">android.hardware.SensorManager; 
+</span><span class="s0">import </span><span class="s1">android.support.constraint.ConstraintLayout; 
+</span><span class="s0">import </span><span class="s1">android.view.MotionEvent; 
+</span><span class="s0">import </span><span class="s1">android.view.View; 
+</span><span class="s0">import </span><span class="s1">android.widget.CompoundButton; 
+</span><span class="s0">import </span><span class="s1">android.widget.ToggleButton; 
+ 
+</span><span class="s0">import </span><span class="s1">org.ros.namespace.GraphName; 
+</span><span class="s0">import </span><span class="s1">org.ros.node.ConnectedNode; 
+</span><span class="s0">import </span><span class="s1">org.ros.node.Node; 
+</span><span class="s0">import </span><span class="s1">org.ros.node.NodeMain; 
+</span><span class="s0">import </span><span class="s1">org.ros.node.topic.Publisher; 
+ 
+</span><span class="s0">import </span><span class="s1">java.util.Timer; 
+</span><span class="s0">import </span><span class="s1">java.util.TimerTask; 
+ 
+</span><span class="s0">import </span><span class="s1">geometry_msgs.Twist; 
+ 
+</span><span class="s0">public class </span><span class="s1">NodeControle </span><span class="s0">implements </span><span class="s1">NodeMain { 
+ 
+    ConstraintLayout layout_joystick, layout_joystick2; 
+ 
+    JoyStickClass js, js2; 
+ 
+    MainActivity activity; 
+ 
+    </span><span class="s0">public </span><span class="s1">NodeControle(MainActivity mainActivity) { 
+        activity = mainActivity; 
+    } 
+ 
+    </span><span class="s0">private </span><span class="s1">ToggleButton botaoAcelerometro; 
+ 
+    </span><span class="s0">private </span><span class="s1">Publisher&lt;Twist&gt; publisher; 
+    </span><span class="s0">private </span><span class="s1">geometry_msgs.Twist cmdVelCorrente; 
+    </span><span class="s0">private </span><span class="s1">Timer publisherTimer; 
+ 
+    </span><span class="s0">private </span><span class="s1">SensorManager mSensorManager; 
+    </span><span class="s0">private </span><span class="s1">Sensor mAccelerometer; 
+    </span><span class="s0">private </span><span class="s1">SensorEventListener sensorEventListener; 
+ 
+    @Override 
+    </span><span class="s0">public </span><span class="s1">GraphName getDefaultNodeName() { 
+        </span><span class="s0">return </span><span class="s1">GraphName.of(</span><span class="s2">&quot;&quot;</span><span class="s1">); 
+    } 
+ 
+    @Override 
+    </span><span class="s0">public void </span><span class="s1">onStart(</span><span class="s0">final </span><span class="s1">ConnectedNode connectedNode) { 
+ 
+        botaoAcelerometro = activity.findViewById(R.id.buttonAceler); 
+ 
+        mSensorManager = (SensorManager) activity.getSystemService(Context.SENSOR_SERVICE); 
+        mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER); 
+ 
+        layout_joystick = activity.findViewById(R.id.layout_joystick); 
+        layout_joystick2 = activity.findViewById(R.id.layout_joystick2); 
+ 
+        String nomeTopico = </span><span class="s2">&quot;~cmd_vel&quot;</span><span class="s1">; 
+        publisher = connectedNode.newPublisher(nomeTopico, geometry_msgs.Twist._TYPE); 
+        cmdVelCorrente = publisher.newMessage(); 
+ 
+        publisherTimer = </span><span class="s0">new </span><span class="s1">Timer(); 
+        publisherTimer.schedule(</span><span class="s0">new </span><span class="s1">TimerTask() { 
+            @Override 
+            </span><span class="s0">public void </span><span class="s1">run() { 
+                publisher.publish(cmdVelCorrente); 
+            } 
+        }, </span><span class="s3">0</span><span class="s1">, </span><span class="s3">80</span><span class="s1">); 
+ 
+        activity.runOnUiThread(</span><span class="s0">new </span><span class="s1">Runnable() { 
+            @Override 
+            </span><span class="s0">public void </span><span class="s1">run() { 
+ 
+                sensorEventListener = </span><span class="s0">new </span><span class="s1">SensorEventListener() { 
+ 
+                    @Override 
+                    </span><span class="s0">public void </span><span class="s1">onSensorChanged(SensorEvent event) { 
+                        Float y = event.values[</span><span class="s3">1</span><span class="s1">]; 
+                        Float z = event.values[</span><span class="s3">2</span><span class="s1">]; 
+ 
+                        </span><span class="s0">if </span><span class="s1">(z &gt;= -</span><span class="s3">2 </span><span class="s1">&amp;&amp; z &lt;= </span><span class="s3">2</span><span class="s1">) { 
+                            cmdVelCorrente.getLinear().setX(</span><span class="s3">0</span><span class="s1">); 
+                        } </span><span class="s0">else </span><span class="s1">{ 
+                            </span><span class="s0">if </span><span class="s1">(z &gt; </span><span class="s3">2</span><span class="s1">) { 
+                                cmdVelCorrente.getLinear().setX(</span><span class="s3">1.0</span><span class="s1">); 
+                            } 
+                            </span><span class="s0">if </span><span class="s1">(z &lt; -</span><span class="s3">2</span><span class="s1">) { 
+                                cmdVelCorrente.getLinear().setX(-</span><span class="s3">1.0</span><span class="s1">); 
+                            } 
+                        } 
+ 
+                        </span><span class="s0">if </span><span class="s1">(y &gt;= -</span><span class="s3">1 </span><span class="s1">&amp;&amp; y &lt;= </span><span class="s3">1</span><span class="s1">) { 
+                            cmdVelCorrente.getAngular().setZ(</span><span class="s3">0</span><span class="s1">); 
+                        } </span><span class="s0">else </span><span class="s1">{ 
+                            </span><span class="s0">if </span><span class="s1">(y &gt; </span><span class="s3">1</span><span class="s1">) { 
+                                cmdVelCorrente.getAngular().setZ(-</span><span class="s3">1.0</span><span class="s1">); 
+                            } 
+                            </span><span class="s0">if </span><span class="s1">(y &lt; -</span><span class="s3">1</span><span class="s1">) { 
+                                cmdVelCorrente.getAngular().setZ(</span><span class="s3">1.0</span><span class="s1">); 
+                            } 
+                        } 
+                    } 
+ 
+                    @Override 
+                    </span><span class="s0">public void </span><span class="s1">onAccuracyChanged(Sensor sensor, </span><span class="s0">int </span><span class="s1">accuracy) { 
+ 
+                    } 
+                }; 
+ 
+                js = </span><span class="s0">new </span><span class="s1">JoyStickClass(activity.getApplicationContext() 
+                        , layout_joystick, R.drawable.image_button); 
+                js.setStickSize(</span><span class="s3">65</span><span class="s1">, </span><span class="s3">65</span><span class="s1">); 
+                js.setLayoutSize(</span><span class="s3">205</span><span class="s1">, </span><span class="s3">205</span><span class="s1">); 
+                js.setLayoutAlpha(</span><span class="s3">35</span><span class="s1">); 
+                js.setStickAlpha(</span><span class="s3">20</span><span class="s1">); 
+                js.setOffset(</span><span class="s3">45</span><span class="s1">); 
+                js.setMinimumDistance(</span><span class="s3">50</span><span class="s1">); 
+ 
+                js2 = </span><span class="s0">new </span><span class="s1">JoyStickClass(activity.getApplicationContext() 
+                        , layout_joystick2, R.drawable.image_button); 
+                js2.setStickSize(</span><span class="s3">65</span><span class="s1">, </span><span class="s3">65</span><span class="s1">); 
+                js2.setLayoutSize(</span><span class="s3">205</span><span class="s1">, </span><span class="s3">205</span><span class="s1">); 
+                js2.setLayoutAlpha(</span><span class="s3">35</span><span class="s1">); 
+                js2.setStickAlpha(</span><span class="s3">20</span><span class="s1">); 
+                js2.setOffset(</span><span class="s3">45</span><span class="s1">); 
+                js2.setMinimumDistance(</span><span class="s3">50</span><span class="s1">); 
+ 
+                botaoAcelerometro.setChecked(</span><span class="s0">false</span><span class="s1">); 
+                </span><span class="s0">if</span><span class="s1">(!botaoAcelerometro.isChecked()){ 
+                    mSensorManager.unregisterListener(sensorEventListener, mAccelerometer); 
+ 
+                    layout_joystick.setOnTouchListener(</span><span class="s0">new </span><span class="s1">View.OnTouchListener() { 
+                        </span><span class="s0">public boolean </span><span class="s1">onTouch(View arg0, MotionEvent arg1) { 
+                            js.drawStick(arg1); 
+                            </span><span class="s0">if </span><span class="s1">(arg1.getAction() == MotionEvent.ACTION_DOWN 
+                                    || arg1.getAction() == MotionEvent.ACTION_MOVE) { 
+                                </span><span class="s0">int </span><span class="s1">direction = js.get8Direction(); 
+                                </span><span class="s0">if </span><span class="s1">(direction == JoyStickClass.STICK_UP) { 
+                                    cmdVelCorrente.getLinear().setZ(</span><span class="s3">1.0</span><span class="s1">); 
+                                    cmdVelCorrente.getAngular().setZ(</span><span class="s3">0</span><span class="s1">); 
+                                } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_UPRIGHT) { 
+                                    cmdVelCorrente.getLinear().setZ(</span><span class="s3">1.0</span><span class="s1">); 
+                                    cmdVelCorrente.getAngular().setZ(-</span><span class="s3">1.0</span><span class="s1">); 
+                                } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_RIGHT) { 
+                                    cmdVelCorrente.getAngular().setZ(-</span><span class="s3">1.0</span><span class="s1">); 
+                                    cmdVelCorrente.getLinear().setZ(</span><span class="s3">0</span><span class="s1">); 
+                                } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_DOWNRIGHT) { 
+                                    cmdVelCorrente.getLinear().setZ(-</span><span class="s3">1.0</span><span class="s1">); 
+                                    cmdVelCorrente.getAngular().setZ(-</span><span class="s3">1.0</span><span class="s1">); 
+                                } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_DOWN) { 
+                                    cmdVelCorrente.getLinear().setZ(-</span><span class="s3">1.0</span><span class="s1">); 
+                                    cmdVelCorrente.getAngular().setZ(</span><span class="s3">0</span><span class="s1">); 
+                                } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_DOWNLEFT) { 
+                                    cmdVelCorrente.getLinear().setZ(-</span><span class="s3">1.0</span><span class="s1">); 
+                                    cmdVelCorrente.getAngular().setZ(</span><span class="s3">1.0</span><span class="s1">); 
+                                } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_LEFT) { 
+                                    cmdVelCorrente.getAngular().setZ(</span><span class="s3">1.0</span><span class="s1">); 
+                                    cmdVelCorrente.getLinear().setZ(</span><span class="s3">0</span><span class="s1">); 
+                                } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_UPLEFT) { 
+                                    cmdVelCorrente.getLinear().setZ(</span><span class="s3">1.0</span><span class="s1">); 
+                                    cmdVelCorrente.getAngular().setZ(</span><span class="s3">1.0</span><span class="s1">); 
+                                } 
+                            } </span><span class="s0">else if </span><span class="s1">(arg1.getAction() == MotionEvent.ACTION_UP) { 
+                                cmdVelCorrente.getLinear().setZ(</span><span class="s3">0</span><span class="s1">); 
+                                cmdVelCorrente.getAngular().setZ(</span><span class="s3">0</span><span class="s1">); 
+                            } 
+                            </span><span class="s0">return true</span><span class="s1">; 
+                        } 
+                    }); 
+ 
+                    layout_joystick2.setOnTouchListener(</span><span class="s0">new </span><span class="s1">View.OnTouchListener() { 
+                        </span><span class="s0">public boolean </span><span class="s1">onTouch(View arg0, MotionEvent arg1) { 
+                            js2.drawStick(arg1); 
+                            </span><span class="s0">if </span><span class="s1">(arg1.getAction() == MotionEvent.ACTION_DOWN 
+                                    || arg1.getAction() == MotionEvent.ACTION_MOVE) { 
+                                </span><span class="s0">int </span><span class="s1">direction = js2.get8Direction(); 
+                                </span><span class="s0">if </span><span class="s1">(direction == JoyStickClass.STICK_UP) { 
+                                    cmdVelCorrente.getLinear().setX(</span><span class="s3">1.0</span><span class="s1">); 
+                                    cmdVelCorrente.getLinear().setY(</span><span class="s3">0</span><span class="s1">); 
+                                } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_UPRIGHT) { 
+                                    cmdVelCorrente.getLinear().setX(</span><span class="s3">1.0</span><span class="s1">); 
+                                    cmdVelCorrente.getLinear().setY(-</span><span class="s3">1.0</span><span class="s1">); 
+                                } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_RIGHT) { 
+                                    cmdVelCorrente.getLinear().setY(-</span><span class="s3">1.0</span><span class="s1">); 
+                                    cmdVelCorrente.getLinear().setX(</span><span class="s3">0</span><span class="s1">); 
+                                } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_DOWNRIGHT) { 
+                                    cmdVelCorrente.getLinear().setX(-</span><span class="s3">1.0</span><span class="s1">); 
+                                    cmdVelCorrente.getLinear().setY(-</span><span class="s3">1.0</span><span class="s1">); 
+                                } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_DOWN) { 
+                                    cmdVelCorrente.getLinear().setX(-</span><span class="s3">1.0</span><span class="s1">); 
+                                    cmdVelCorrente.getLinear().setY(</span><span class="s3">0</span><span class="s1">); 
+                                } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_DOWNLEFT) { 
+                                    cmdVelCorrente.getLinear().setX(-</span><span class="s3">1.0</span><span class="s1">); 
+                                    cmdVelCorrente.getLinear().setY(</span><span class="s3">1.0</span><span class="s1">); 
+                                } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_LEFT) { 
+                                    cmdVelCorrente.getLinear().setY(</span><span class="s3">1.0</span><span class="s1">); 
+                                    cmdVelCorrente.getLinear().setX(</span><span class="s3">0</span><span class="s1">); 
+                                } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_UPLEFT) { 
+                                    cmdVelCorrente.getLinear().setX(</span><span class="s3">1.0</span><span class="s1">); 
+                                    cmdVelCorrente.getLinear().setY(</span><span class="s3">1.0</span><span class="s1">); 
+                                } 
+                            } </span><span class="s0">else if </span><span class="s1">(arg1.getAction() == MotionEvent.ACTION_UP) { 
+                                cmdVelCorrente.getLinear().setX(</span><span class="s3">0</span><span class="s1">); 
+                                cmdVelCorrente.getLinear().setY(</span><span class="s3">0</span><span class="s1">); 
+                            } 
+                            </span><span class="s0">return true</span><span class="s1">; 
+                        } 
+                    }); 
+                } 
+ 
+                botaoAcelerometro.setOnCheckedChangeListener(</span><span class="s0">new </span><span class="s1">CompoundButton.OnCheckedChangeListener() { 
+                    @Override 
+                    </span><span class="s0">public void </span><span class="s1">onCheckedChanged(CompoundButton buttonView, </span><span class="s0">boolean </span><span class="s1">isChecked) { 
+                        </span><span class="s0">if </span><span class="s1">(isChecked) { 
+                            mSensorManager.registerListener(sensorEventListener, mAccelerometer, SensorManager.SENSOR_DELAY_NORMAL); 
+                            layout_joystick.setOnTouchListener(</span><span class="s0">new </span><span class="s1">View.OnTouchListener() { 
+                                </span><span class="s0">public boolean </span><span class="s1">onTouch(View arg0, MotionEvent arg1) { 
+                                    js.drawStick(arg1); 
+                                    </span><span class="s0">if </span><span class="s1">(arg1.getAction() == MotionEvent.ACTION_DOWN 
+                                            || arg1.getAction() == MotionEvent.ACTION_MOVE) { 
+                                        </span><span class="s0">int </span><span class="s1">direction = js.get8Direction(); 
+                                        </span><span class="s0">if </span><span class="s1">(direction == JoyStickClass.STICK_UP) { 
+                                            cmdVelCorrente.getLinear().setZ(</span><span class="s3">1.0</span><span class="s1">); 
+                                        } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_DOWN) { 
+                                            cmdVelCorrente.getLinear().setZ(-</span><span class="s3">1.0</span><span class="s1">); 
+                                        } 
+                                    } </span><span class="s0">else if </span><span class="s1">(arg1.getAction() == MotionEvent.ACTION_UP) { 
+                                        cmdVelCorrente.getLinear().setZ(</span><span class="s3">0</span><span class="s1">); 
+                                    } 
+                                    </span><span class="s0">return true</span><span class="s1">; 
+                                } 
+                            }); 
+ 
+                            layout_joystick2.setOnTouchListener(</span><span class="s0">new </span><span class="s1">View.OnTouchListener() { 
+                                </span><span class="s0">public boolean </span><span class="s1">onTouch(View arg0, MotionEvent arg1) { 
+                                    js2.drawStick(arg1); 
+                                    </span><span class="s0">if </span><span class="s1">(arg1.getAction() == MotionEvent.ACTION_DOWN 
+                                            || arg1.getAction() == MotionEvent.ACTION_MOVE) { 
+                                        </span><span class="s0">int </span><span class="s1">direction = js2.get8Direction(); 
+                                        </span><span class="s0">if </span><span class="s1">(direction == JoyStickClass.STICK_RIGHT) { 
+                                            cmdVelCorrente.getLinear().setY(-</span><span class="s3">1.0</span><span class="s1">); 
+                                        } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_LEFT) { 
+                                            cmdVelCorrente.getLinear().setY(</span><span class="s3">1.0</span><span class="s1">); 
+                                            cmdVelCorrente.getLinear().setX(</span><span class="s3">0</span><span class="s1">); 
+                                        } 
+                                    } </span><span class="s0">else if </span><span class="s1">(arg1.getAction() == MotionEvent.ACTION_UP) { 
+                                        cmdVelCorrente.getLinear().setY(</span><span class="s3">0</span><span class="s1">); 
+                                    } 
+                                    </span><span class="s0">return true</span><span class="s1">; 
+                                } 
+                            }); 
+                        } 
+ 
+                        </span><span class="s0">if</span><span class="s1">(!botaoAcelerometro.isChecked()) { 
+                            mSensorManager.unregisterListener(sensorEventListener, mAccelerometer); 
+ 
+                            layout_joystick.setOnTouchListener(</span><span class="s0">new </span><span class="s1">View.OnTouchListener() { 
+                                </span><span class="s0">public boolean </span><span class="s1">onTouch(View arg0, MotionEvent arg1) { 
+                                    js.drawStick(arg1); 
+                                    </span><span class="s0">if </span><span class="s1">(arg1.getAction() == MotionEvent.ACTION_DOWN 
+                                            || arg1.getAction() == MotionEvent.ACTION_MOVE) { 
+                                        </span><span class="s0">int </span><span class="s1">direction = js.get8Direction(); 
+                                        </span><span class="s0">if </span><span class="s1">(direction == JoyStickClass.STICK_UP) { 
+                                            cmdVelCorrente.getLinear().setZ(</span><span class="s3">1.0</span><span class="s1">); 
+                                            cmdVelCorrente.getAngular().setZ(</span><span class="s3">0</span><span class="s1">); 
+                                        } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_UPRIGHT) { 
+                                            cmdVelCorrente.getLinear().setZ(</span><span class="s3">1.0</span><span class="s1">); 
+                                            cmdVelCorrente.getAngular().setZ(-</span><span class="s3">1.0</span><span class="s1">); 
+                                        } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_RIGHT) { 
+                                            cmdVelCorrente.getAngular().setZ(-</span><span class="s3">1.0</span><span class="s1">); 
+                                            cmdVelCorrente.getLinear().setZ(</span><span class="s3">0</span><span class="s1">); 
+                                        } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_DOWNRIGHT) { 
+                                            cmdVelCorrente.getLinear().setZ(-</span><span class="s3">1.0</span><span class="s1">); 
+                                            cmdVelCorrente.getAngular().setZ(-</span><span class="s3">1.0</span><span class="s1">); 
+                                        } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_DOWN) { 
+                                            cmdVelCorrente.getLinear().setZ(-</span><span class="s3">1.0</span><span class="s1">); 
+                                            cmdVelCorrente.getAngular().setZ(</span><span class="s3">0</span><span class="s1">); 
+                                        } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_DOWNLEFT) { 
+                                            cmdVelCorrente.getLinear().setZ(-</span><span class="s3">1.0</span><span class="s1">); 
+                                            cmdVelCorrente.getAngular().setZ(</span><span class="s3">1.0</span><span class="s1">); 
+                                        } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_LEFT) { 
+                                            cmdVelCorrente.getAngular().setZ(</span><span class="s3">1.0</span><span class="s1">); 
+                                            cmdVelCorrente.getLinear().setZ(</span><span class="s3">0</span><span class="s1">); 
+                                        } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_UPLEFT) { 
+                                            cmdVelCorrente.getLinear().setZ(</span><span class="s3">1.0</span><span class="s1">); 
+                                            cmdVelCorrente.getAngular().setZ(</span><span class="s3">1.0</span><span class="s1">); 
+                                        } 
+                                    } </span><span class="s0">else if </span><span class="s1">(arg1.getAction() == MotionEvent.ACTION_UP) { 
+                                        cmdVelCorrente.getLinear().setZ(</span><span class="s3">0</span><span class="s1">); 
+                                        cmdVelCorrente.getAngular().setZ(</span><span class="s3">0</span><span class="s1">); 
+                                    } 
+                                    </span><span class="s0">return true</span><span class="s1">; 
+                                } 
+                            }); 
+ 
+                            layout_joystick2.setOnTouchListener(</span><span class="s0">new </span><span class="s1">View.OnTouchListener() { 
+                                </span><span class="s0">public boolean </span><span class="s1">onTouch(View arg0, MotionEvent arg1) { 
+                                    js2.drawStick(arg1); 
+                                    </span><span class="s0">if </span><span class="s1">(arg1.getAction() == MotionEvent.ACTION_DOWN 
+                                            || arg1.getAction() == MotionEvent.ACTION_MOVE) { 
+                                        </span><span class="s0">int </span><span class="s1">direction = js2.get8Direction(); 
+                                        </span><span class="s0">if </span><span class="s1">(direction == JoyStickClass.STICK_UP) { 
+                                            cmdVelCorrente.getLinear().setX(</span><span class="s3">1.0</span><span class="s1">); 
+                                            cmdVelCorrente.getLinear().setY(</span><span class="s3">0</span><span class="s1">); 
+                                        } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_UPRIGHT) { 
+                                            cmdVelCorrente.getLinear().setX(</span><span class="s3">1.0</span><span class="s1">); 
+                                            cmdVelCorrente.getLinear().setY(-</span><span class="s3">1.0</span><span class="s1">); 
+                                        } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_RIGHT) { 
+                                            cmdVelCorrente.getLinear().setY(-</span><span class="s3">1.0</span><span class="s1">); 
+                                            cmdVelCorrente.getLinear().setX(</span><span class="s3">0</span><span class="s1">); 
+                                        } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_DOWNRIGHT) { 
+                                            cmdVelCorrente.getLinear().setX(-</span><span class="s3">1.0</span><span class="s1">); 
+                                            cmdVelCorrente.getLinear().setY(-</span><span class="s3">1.0</span><span class="s1">); 
+                                        } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_DOWN) { 
+                                            cmdVelCorrente.getLinear().setX(-</span><span class="s3">1.0</span><span class="s1">); 
+                                            cmdVelCorrente.getLinear().setY(</span><span class="s3">0</span><span class="s1">); 
+                                        } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_DOWNLEFT) { 
+                                            cmdVelCorrente.getLinear().setX(-</span><span class="s3">1.0</span><span class="s1">); 
+                                            cmdVelCorrente.getLinear().setY(</span><span class="s3">1.0</span><span class="s1">); 
+                                        } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_LEFT) { 
+                                            cmdVelCorrente.getLinear().setY(</span><span class="s3">1.0</span><span class="s1">); 
+                                            cmdVelCorrente.getLinear().setX(</span><span class="s3">0</span><span class="s1">); 
+                                        } </span><span class="s0">else if </span><span class="s1">(direction == JoyStickClass.STICK_UPLEFT) { 
+                                            cmdVelCorrente.getLinear().setX(</span><span class="s3">1.0</span><span class="s1">); 
+                                            cmdVelCorrente.getLinear().setY(</span><span class="s3">1.0</span><span class="s1">); 
+                                        } 
+                                    } </span><span class="s0">else if </span><span class="s1">(arg1.getAction() == MotionEvent.ACTION_UP) { 
+                                        cmdVelCorrente.getLinear().setX(</span><span class="s3">0</span><span class="s1">); 
+                                        cmdVelCorrente.getLinear().setY(</span><span class="s3">0</span><span class="s1">); 
+                                    } 
+                                    </span><span class="s0">return true</span><span class="s1">; 
+                                } 
+                            }); 
+                        } 
+                    } 
+                }); 
+            } 
+        }); 
+    } 
+ 
+    @Override 
+    </span><span class="s0">public void </span><span class="s1">onShutdown(Node node) { 
+ 
+    } 
+ 
+    @Override 
+    </span><span class="s0">public void </span><span class="s1">onShutdownComplete(Node node) { 
+        publisherTimer.cancel(); 
+        publisherTimer.purge(); 
+    } 
+ 
+ 
+    @Override 
+    </span><span class="s0">public void </span><span class="s1">onError(Node node, Throwable throwable) { 
+ 
+    } 
+ 
+} 
+</span></pre>
+</body>
+</html>
