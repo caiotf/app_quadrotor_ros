@@ -101,6 +101,10 @@ public class MainActivity extends RosActivity {
 
         NodeControle nodeControle = new NodeControle(this);
 
+        NtpTimeProvider ntpTimeProvider = new NtpTimeProvider(InetAddressFactory.newFromHostString("192.168.0.1"), nodeMainExecutor.getScheduledExecutorService());
+        ntpTimeProvider.startPeriodicUpdates(1, TimeUnit.MINUTES);
+        nodeConfiguration.setTimeProvider(ntpTimeProvider);
+
         nodeMainExecutor.execute(rosImageView, nodeConfiguration);
         nodeMainExecutor.execute(nodeControle, nodeConfiguration);
 
