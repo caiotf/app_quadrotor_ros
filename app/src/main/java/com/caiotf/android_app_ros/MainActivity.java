@@ -47,7 +47,7 @@ public class MainActivity extends RosActivity {
     private LinearLayout linearLayoutMap;
 
     public MainActivity() {
-        super("Controle", "Controle");
+        super("Teleoperação Quadrotor ROS", "Teleoperação Quadrotor ROS");
         systemCommands = new SystemCommands();
     }
 
